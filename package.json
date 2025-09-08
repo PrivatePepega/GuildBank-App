@@ -1,0 +1,112 @@
+{
+  "name": "guildbankapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "GuildBank App for apping GuildBank",
+  "author": "PrivatePepega <privatepepega@yahoo.com>",
+  "main": "src/electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PrivatePepega/GuildBank-App.git"
+  },
+  "build": {
+    "appId": "com.pepegasIndustries.ElectronApp",
+    "productName": "GuildBankApp",
+    "artifactName": "${productName}-${version}-portable.${ext}",
+    "publish": {
+      "provider": "github",
+      "owner": "PrivatePepega",
+      "repo": "GuildBank-App",
+      "private": true
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist-react/**/*"
+    ],
+    "extraResources": [
+      "dist-electron/preload.cjs",
+      "src/UI/assets/**",
+      "app-update.yml"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "release"
+    },
+    "extraMetadata": {
+      "main": "dist-electron/main-obfuscated.js"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns",
+      "identity": "GuildBank",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/bank.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "assets/bank.png"
+    },
+    "generateUpdatesFilesForAllChannels": false
+  },
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:react dev:electron",
+    "dev:react": "vite",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "obfuscate": "node src/electron/obfuscate.js",
+    "export-electron": "node src/electron/export-electron.js",
+    "dist:mac": "npm run obfuscate && npm run export-electron && npm run build && electron-builder --mac --arm64 --publish never && npm run gen:yml:mac",
+    "dist:win": "npm run obfuscate && npm run export-electron && npm run build && electron-builder --win --x64 --publish never && npm run gen:yml:win",
+    "dist:linux": "npm run obfuscate && npm run export-electron && npm run build && electron-builder --linux --x64 --publish never && npm run gen:yml:linux",
+    "gen:yml:win": "node scripts/generate-latest-yml.js win",
+    "gen:yml:mac": "node scripts/generate-latest-yml.js mac",
+    "gen:yml:linux": "node scripts/generate-latest-yml.js linux"
+   },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.0.6",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.5.0",
+    "electron-log": "^5.4.0",
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.6.2",
+    "js-confuser": "^2.0.0",
+    "node-fetch": "^3.3.2",
+    "node-powershell": "^5.0.1",
+    "node-rsa": "^1.1.1",
+    "openpgp": "^6.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sudo-prompt": "^9.2.1",
+    "tailwindcss": "^4.0.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^8.0.0",
+    "electron": "^34.1.1",
+    "electron-builder": "^25.1.8",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "npm-run-all": "^4.1.5",
+    "vite": "^6.1.0"
+  }
+}
