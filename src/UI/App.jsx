@@ -19,32 +19,43 @@ function App() {
 
 
 
-
-
-
-
   useEffect(() => {
-    getVanillaPlusPath();
-    fetchWallet();
-    fetchKeys();
-    getSavedVanillaPlusAccount();
-    getVersion();
-    getVanillaCacheCount();
-    try {
-      const cleanup = window.electron.onMainProcessLog((type, args) => {
-        if (type === 'log') {
-          console.log('[Main Process]', ...args); // Shows in DevTools
-        } else if (type === 'error') {
-          console.error('[Main Process]', ...args); // Shows in DevTools
-        }
-      });
-      console.log('Renderer: App initialized'); // Shows in DevTools
-      return cleanup;
-    } catch (err) {
-      console.error('Renderer: Failed to set up log listener:', err);
-    }
-  },
-   []);
+    console.log('TEST 1: useEffect running'); // Can you see this in DevTools?
+    console.log('TEST 2: window.electron exists?', !!window.electron);
+    console.log('TEST 3: onMainProcessLog exists?', !!window.electron?.onMainProcessLog);
+    console.log('TEST 4: notifyRendererReady exists?', !!window.electron?.notifyRendererReady);
+    
+    const cleanup = window.electron.onMainProcessLog((type, args) => {
+        console.log('TEST 5: IPC RECEIVED!!!', type, args); // Does this ever fire?
+    });
+    
+    window.electron.notifyRendererReady();
+    console.log('TEST 6: notifyRendererReady called');
+    
+    return cleanup;
+}, []);
+
+
+useEffect(() => {
+  getVanillaPlusPath();
+  fetchWallet();
+  fetchKeys();
+  getSavedVanillaPlusAccount();
+  getVersion();
+  getVanillaCacheCount();
+
+  const cleanup = window.electron.onMainProcessLog((type, args) => {
+      if (type === 'log') {
+          console.log('[Main]', ...args);
+      } else if (type === 'error') {
+          console.error('[Main]', ...args);
+      }
+  });
+
+  window.electron.notifyRendererReady();
+
+  return cleanup;
+}, []);
 
   const fetchWallet = async () => {
     const savedWallet = await window.electron.getWallet();
@@ -69,12 +80,13 @@ function App() {
   };
 
   const saveVanillaPlusAccount = async () => { // Renamed from saveMmoPlusAccount
-    const result = await window.electron.saveVanillaPlusAccount({ account: inputVanillaPlusAccount });
+    const result = await window.electron.saveVanillaPlusAccount(inputVanillaPlusAccount);
     getSavedVanillaPlusAccount();
   };
   const getSavedVanillaPlusAccount = async () => { // Renamed from getSavedMmoPlusAccount
     const account = await window.electron.getVanillaPlusAccount();
-    setVanillaPlusAccount(account.account);
+    setVanillaPlusAccount(account);
+    console.log("account id", account);
   };
 
   const [isOpen, setIsOpen] = useState(false);
@@ -82,17 +94,29 @@ function App() {
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
+  // const addItem = (item) => {
+  //   setSelectedItems((prev) => {
+  //     if (!prev.some((selected) => selected.id === item.id)) {
+  //       return [...prev, item];
+  //     }
+  //     return prev;
+  //   });
+  //   setIsOpen(false);
+  // };
   const addItem = (item) => {
     setSelectedItems((prev) => {
-      if (!prev.some((selected) => selected.id === item.id)) {
-        return [...prev, item];
+      if (!prev.some((id) => id === item.id)) {
+        return [...prev, item.id];
       }
       return prev;
     });
     setIsOpen(false);
   };
+  // const removeItem = (id) => {
+  //   setSelectedItems((prev) => prev.filter((item) => item.id !== id));
+  // };
   const removeItem = (id) => {
-    setSelectedItems((prev) => prev.filter((item) => item.id !== id));
+    setSelectedItems((prev) => prev.filter((itemId) => itemId !== id));
   };
   const findExe = (itemId) => {
     if (itemId === 1) {
@@ -134,7 +158,19 @@ function App() {
   const data = [
     { "id": 1, "name": "Vanilla-Plus", "img": vanillaPlus, "path": vanillaPlusPath, "cacheCount": vanillaCache, "addon": "https://www.curseforge.com/wow/addons/vanilla-plus", "fileCount": "countOfFile", "gameExe": "WowClassic.exe", "account": vanillaPlusAccount }, // Renamed MMOPLUS to VanillaPlus
   ];
-
+  const freshData = [
+    {
+      id: 1,
+      name: "Vanilla-Plus",
+      img: vanillaPlus,
+      path: vanillaPlusPath,
+      cacheCount: vanillaCache,
+      addon: "https://www.curseforge.com/wow/addons/vanilla-plus",
+      fileCount: "countOfFile",
+      gameExe: "WowClassic.exe",
+      account: vanillaPlusAccount,
+    },
+  ];
 
 
 
@@ -168,7 +204,10 @@ function App() {
   //   const ping = await window.electron.testPing();
   // };
 
-
+  // Force refresh selected items when source data changes
+  useEffect(() => {
+    // This is enough because we now use freshData on render
+  }, [vanillaPlusPath, vanillaPlusAccount, vanillaCache]);
 
 
 const [exeHelp, setExeHelp] = useState(false);
@@ -250,60 +289,71 @@ const [accountHelp, setAccountHelp] = useState(false);
             )}
 
             <ul className="mt-5 w-[600px] border rounded-md p-2">
-              {selectedItems.map((item) => (
-                <li key={item.id} className="px-4 py-2 border-b ">
-                  <p className="text-xl font-bold mb-4">
-                    {item.name}
-                  </p>
-                  <div className='flex items-center justify-between gap-4'>
-                    <div>
-                      <img src={item.img} alt="pic" className='w-auto h-auto max-w-[140px] max-h-[140px] rounded-md object-contain mx-auto'/>
-                      <button onClick={() => removeItem(item.id)} className="w-full">
-                        Remove
-                      </button>
-                    </div>
+              {selectedItems.map((itemId) => {
+                const item = freshData.find(d => d.id === itemId);
+                if (!item) return null;
 
-                    <div className='flex flex-col'>
-                      <div className='flex items-center'>
-                        <p className="font-bold text-lg">
-                          Addon:
-                        </p>
-                        <span>
-                          {item.addon}
-                        </span>
-                      </div>
-                      <div className="text-left w-60">
-                        <button onClick={()=>findExe(item.id)}>locate .exe file</button><button onClick={()=>setExeHelp(!exeHelp)}>?</button>
-                        {exeHelp && <p className="m-5 italic">inside _classic_era_, click on {item.gameExe} </p>}
-                        <span className="w-full break-words block">{item.path}</span>
-                      </div>
+                return (
+                  <li key={item.id} className="px-4 py-2 border-b ">
+                    <p className="text-xl font-bold mb-4">
+                      {item.name}
+                    </p>
+                    <div className='flex items-center justify-between gap-4'>
                       <div>
-                        
-                        <div className="flex">
-                          <button onClick={()=>saveVanillaPlusAccount(vanillaPlusAccount)}>save</button>
-                          <input
-                            type="text"
-                            onChange={(e) => setInputVanillaPlusAccount(e.target.value)}
-                            placeholder="Account Number"
-                          />  
+                        <img src={item.img} alt="pic" className='w-auto h-auto max-w-[140px] max-h-[140px] rounded-md object-contain mx-auto'/>
+                        <button onClick={() => removeItem(item.id)} className="w-full">
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className='flex flex-col'>
+                        <div className='flex items-center'>
+                          <p className="font-bold text-lg">
+                            Addon:
+                          </p>
+                          <span>
+                            {item.addon}
+                          </span>
                         </div>
+                        <div className="text-left w-60">
+                          <button onClick={()=>findExe(item.id)}>locate .exe file</button>
+                          <button onClick={()=>setExeHelp(!exeHelp)}>?</button>
+                          {exeHelp && <p className="m-5 italic">inside _classic_era_, click on {item.gameExe} </p>}
+                          <span className="w-full break-words block">{item.path}</span>
+                        </div>
+                        <div>
+                          <div className="flex">
+                            <button 
+                              onClick={() => saveVanillaPlusAccount()} 
+                              // Note: you were passing vanillaPlusAccount which is wrong
+                            >
+                              save
+                            </button>
+                            <input
+                              type="text"
+                              value={inputVanillaPlusAccount}
+                              onChange={(e) => setInputVanillaPlusAccount(e.target.value)}
+                              placeholder="Account Number"
+                            />  
+                          </div>
                           <div className="flex items-center">
-                            <button onClick={()=>setAccountHelp(!accountHelp)} className="">?</button><span >Account: {item.account}</span>
+                            <button onClick={()=>setAccountHelp(!accountHelp)} className="">?</button>
+                            <span>Account: {item.account}</span>
                           </div>
                           {accountHelp && <p className="italic">input account# you're logging in, _classic_era_~WTF~Account</p>}
-
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-row items-center justify-start gap-4">
-                    <button onClick={()=>exportFile(item.id)} className="w-30 text-xs">export cache</button>
-                    <div>
-                      {item.cacheCount}
+                    <div className="flex flex-row items-center justify-start gap-4">
+                      <button onClick={()=>exportFile(item.id)} className="w-30 text-xs">export cache</button>
+                      <div>
+                        {item.cacheCount}
+                      </div>
                     </div>
-                  </div>
-                  <button onClick={()=>playGame(item.id)} className="w-full my-3">play</button>
-                </li>
-              ))}
+                    <button onClick={()=>playGame(item.id)} className="w-full my-3">play</button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
           {version && <p>release number: {version}</p> }

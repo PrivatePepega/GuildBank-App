@@ -20,14 +20,17 @@ electron.contextBridge.exposeInMainWorld("electron", {
     getVanillaCacheCount: () => electron.ipcRenderer.invoke("return-VanillaCache-Count"), // Renamed from export-wow-files
 
     // testPing: () => electron.ipcRenderer.invoke('test-auth-ping'),
-  // Added: Receive main process logs
+
   onMainProcessLog: (callback) => {
     electron.ipcRenderer.on('main-process-log', (event, [type, ...args]) => {
-      callback(type, args);
+        callback(type, args);
     });
-    // Return cleanup function (standard practice)
     return () => {
-      ipcRenderer.removeAllListeners('main-process-log');
+        electron.ipcRenderer.removeAllListeners('main-process-log'); // fixed: was bare ipcRenderer
     };
-  },
+},
+    // Add this so main knows renderer is mounted
+    notifyRendererReady: () => {
+        electron.ipcRenderer.send('renderer-ready');
+    },
 });

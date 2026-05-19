@@ -131,7 +131,7 @@ IZmFo77kw+aduHKCPM8nRg7+NSOck6xBX0zVL/UyO7b52+aPpZF2qbCRdDBYLcWI
 awIDAQAB
 -----END PUBLIC KEY-----`;
 
-const allowedServers = ["Dreamscythe", "NightSlayer", "Maladath (AU)", "DoomHowl"];
+const allowedServers = ["Dreamscythe", "NightSlayer", "Maladath"];
 const AddonHash = process.env.ADDONHASH || 'HARDCODED_ADDONHASH_PLACEHOLDER'; // this is .lua and .toc sha-256 hashed, added and sha-256 hashed once again. the order is a-z. so .luaHash + .tocHash = addonHash. dont fuck up retard... -10 million dolla
 const ADDON_NAME = "VanillaPlus"; // Hardcode your addon name here
 const VanillaHash = process.env.VANILLAHASH || 'HARDCODED_VANILLAHASH_PLACEHOLDER';
@@ -202,43 +202,60 @@ if (isDev()) {
 
 
 let mainWindow = null;
-app.on("ready" , async () =>{
-    mainWindow = new BrowserWindow({
-        webPreferences: {
-            preload: getPreloadPath(),
-            contextIsolation: true,
-            nodeIntegration: false
-          },
-    });
-    if (isDev()) {
-        mainWindow.loadURL("http://localhost:5123");
-    } else {
-        mainWindow.loadFile(path.join(app.getAppPath(), "/dist-react/index.html"));
-        // Enable DevTools for debugging in the packaged .exe
-        mainWindow.webContents.openDevTools();
+app.on("ready", async () => {
+  mainWindow = new BrowserWindow({
+      webPreferences: {
+          preload: getPreloadPath(),
+          contextIsolation: true,
+          nodeIntegration: false
+      },
+  });
 
-        // Override console.log and console.error to send to renderer
-        const originalConsoleLog = console.log;
-        const originalConsoleError = console.error;
+  // --- LOG FORWARDING SETUP (runs in BOTH dev and prod) ---
+  const logBuffer = [];
+  let rendererReady = false;
 
-        console.log = (...args) => {
-          originalConsoleLog(...args); // Keep terminal output
+  const sendLog = (type, args) => {
+      if (rendererReady && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('main-process-log', [type, ...args]);
+      } else {
+          logBuffer.push([type, ...args]);
+      }
+  };
+
+  ipcMain.once('renderer-ready', () => {
+      rendererReady = true;
+      logBuffer.forEach(entry => {
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('main-process-log', ['log', ...args]);
+              mainWindow.webContents.send('main-process-log', entry);
           }
-        };
-        console.error = (...args) => {
-          originalConsoleError(...args); // Keep terminal output
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('main-process-log', ['error', ...args]);
-          }
-        };
-        console.log('Main process started'); // Test log
+      });
+      logBuffer.length = 0;
+  });
 
-    }
-    checkAutoUpdateStatus();
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+  console.log = (...args) => {
+      originalConsoleLog(...args);
+      sendLog('log', args);
+  };
+  console.error = (...args) => {
+      originalConsoleError(...args);
+      sendLog('error', args);
+  };
+  // --- END LOG FORWARDING SETUP ---
+
+  if (isDev()) {
+      mainWindow.loadURL("http://localhost:5123");
+  } else {
+      mainWindow.loadFile(path.join(app.getAppPath(), "/dist-react/index.html"));
+      mainWindow.webContents.openDevTools();
+  }
+
+  console.log('Main process started');
+  checkAutoUpdateStatus();
 });
-
 
 
 
@@ -254,8 +271,8 @@ ipcMain.handle("get-app-version", () => {
 
 
 // log.info = log;
-log.warn = (message) => console.log(`[WARN] ${message}`);
-log.error = (message) => console.log(`[ERROR] ${message}`);
+// log.warn = (message) => console.log(`[WARN] ${message}`);
+// log.error = (message) => console.log(`[ERROR] ${message}`);
 
 
 pkg.autoUpdater.logger = log;
@@ -548,8 +565,10 @@ ipcMain.handle("save-vanilla-plus-account", async (_event, account) => {
       throw new Error("Vanilla Plus path not set in store.");
     }
 
+    const folderPath = path.dirname(vanillaPlusPath);
+
     // Construct the path to the WTF/Account folder
-    const accountPath = path.join(vanillaPlusPath, "WTF", "Account");
+    const accountPath = path.join(folderPath, "WTF", "Account");
 
     // Read the list of folders in WTF/Account
     let accountFolders;
@@ -566,6 +585,7 @@ ipcMain.handle("save-vanilla-plus-account", async (_event, account) => {
 
     // If account doesn't exist, return an error
     if (!accountExists) {
+      console.log("Please try again with a valid account.")
       return "Please try again with a valid account.";
     }
 

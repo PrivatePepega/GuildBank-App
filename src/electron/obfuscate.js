@@ -12,7 +12,6 @@ if (!fs.existsSync(envPath)) {
 }
 dotenv.config({ path: envPath });
 console.log(`dotenv loaded, SECRET: ${process.env.SECRET ? "[set]" : "undefined"}, GH_TOKEN: ${process.env.GH_TOKEN ? '[set]' : 'undefined'}`);
-console.log(`dotenv loaded, AddonHash: ${process.env.ADDONHASH ? "[set]" : "undefined"}, VanillaHash: ${process.env.VANILLAHASH ? '[set]' : 'undefined'}`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
