@@ -29,6 +29,11 @@ if (isDev()) {
 
 
 
+
+
+
+
+
 function checkRSAKeyPair(publicKey, privateKey) {
   try {
     // Validate PEM format
@@ -67,9 +72,6 @@ function checkRSAKeyPair(publicKey, privateKey) {
     return false;
   }
 }
-
-
-
 // Generate RSA keypair on app boot
 function generateRSAKeyPair() {
   const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -83,14 +85,7 @@ function generateRSAKeyPair() {
 
   return { publicKey, privateKey };
 }
-
-
 // generateRSAKeyPair();
-
-
-
-
-
 async function testPingServer() {
   try {
     const response = await fetch("http://localhost:3000/api/test-ping", {
@@ -115,6 +110,12 @@ async function testPingServer() {
     return { success: false, message: err.message };
   }
 }
+
+
+
+
+
+
 
 
 
@@ -270,17 +271,30 @@ ipcMain.handle("get-app-version", () => {
 
 
 
-// log.info = log;
-// log.warn = (message) => console.log(`[WARN] ${message}`);
-// log.error = (message) => console.log(`[ERROR] ${message}`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 pkg.autoUpdater.logger = log;
 pkg.autoUpdater.autoDownload = true;
 pkg.autoUpdater.autoInstallOnAppQuit = true;
-
-
-
 
 
 // Configure autoUpdater for private repository
@@ -291,8 +305,6 @@ pkg.autoUpdater.setFeedURL({
   private: true,
   token: ghToken
 });
-
-
 
 
 async function checkAutoUpdateStatus() {
@@ -349,10 +361,14 @@ async function checkAutoUpdateStatus() {
       return;
     }
     await checkForUpdates();
+    setInterval(async () => {
+      log.info("[AutoUpdater] Background check triggered");
+      await checkForUpdates(true);
+  }, 30 * 60 * 1000);
   }
 }
 
-async function checkForUpdates() {
+async function checkForUpdates(silent = false) {
   log.info("[AutoUpdater] Initiating update check");
   try {
     const updateCheckResult = await pkg.autoUpdater.checkForUpdates();
@@ -607,11 +623,11 @@ function getSavedVariablesPath() {
   const vanillaPlusLauncherPath = store.get("vanillaPlusPath", "");
   const vanillaPlusPath = path.dirname(vanillaPlusLauncherPath);
   const accountName = store.get("save-vanilla-plus-account", {});
-  if (!accountName.account) {
+  if (!accountName) {
     console.error("No account name found in store");
     return "";
   }
-  const basePath = path.join(vanillaPlusPath, "WTF", "Account", accountName.account, "SavedVariables");
+  const basePath = path.join(vanillaPlusPath, "WTF", "Account", accountName, "SavedVariables");
   const filePath = path.join(basePath, `${ADDON_NAME}.lua`);
   console.log("getSavedVariablesPath returned:", filePath); // Debug
   return filePath;
@@ -666,7 +682,7 @@ function getSavedVariablesPath() {
 
 // File Tracking
 async function trackChanges(filePath, gameExitTime) {
-  console.log("Tracking triggered for:", filePath);
+  console.log("Tracking addon triggered for:", filePath);
   const platform = os.platform();
   console.log(`Tracking on platform: ${platform}`); // Debug
   try {
@@ -1172,7 +1188,7 @@ ipcMain.handle("play-vanilla-plus", async () => {
   const privateKey = keyPair.privateKey;
   const vanillaPlusPath = store.get("vanillaPlusPath", "");
   const account = store.get("save-vanilla-plus-account", {});
-  const accountName = account.account;
+  const accountName = account;
 
   if (!walletWallet || !privateKey || !publicKey || !accountName || !vanillaPlusPath) {
     console.error("Log failed: Missing wallet or keys or data", { walletWallet, publicKey, privateKey, accountName, vanillaPlusPath });
@@ -1214,7 +1230,7 @@ ipcMain.handle("play-vanilla-plus", async () => {
 
    const userVanillaHash = await hashFile(vanillaPlusPath);
    console.log("user .exe hash is", userVanillaHash);
-   console.log("app .exe hash is", VanillaHash);
+   console.log("expected app .exe hash is", VanillaHash);
     if(userVanillaHash != VanillaHash){
       console.log(".exe conspiracy found;");
       mainWindow.webContents.send("log-update", {
@@ -1299,15 +1315,15 @@ ipcMain.handle("play-vanilla-plus", async () => {
       let newWeekly = false;
       const account = store.get("save-vanilla-plus-account", {});
       const userPaswordAdded = processKeysIntoPassword(publicKey, privateKey);
-      const addingPassword = account.account +  userPaswordAdded;
+      const addingPassword = account +  userPaswordAdded;
       const accountHash = crypto.createHash('sha256').update(addingPassword).digest('hex');
       const accountName = accountHash;
-      console.log("account:" , account);
-      console.log("accountName:", accountName);
+      console.log("account: " , account);
+      console.log("accountName hashed: ", accountName);
       const wallet = store.get("wallet", null);
-      console.log("wallet:", wallet);
+      console.log("wallet: ", wallet);
       const walletWallet = wallet.wallet;
-      console.log("walletWallet:", walletWallet);
+      console.log("walletWallet: ", walletWallet);
 
 
 
@@ -1591,7 +1607,7 @@ ipcMain.handle("return-VanillaCache-Count", async () => {
 //     const publicKey = keyPair.publicKey;
 //     const privateKey = keyPair.privateKey;
 //     const account = store.get("save-vanilla-plus-account", {});
-//     const accountName = account.account;
+//     const accountName = account;
 //     console.log("account:" , account);
 //     console.log("accountName:", accountName);
 
