@@ -34,6 +34,258 @@ if (isDev()) {
 
 
 
+
+
+
+
+ipcMain.handle("test-auth-ping", async () => {
+  try {
+    const wallet = store.get("wallet", null);
+    console.log("wallet:", wallet);
+    const walletWallet = wallet.wallet;
+    console.log("walletWallet:", walletWallet);
+
+    const keyPair = store.get("keys", { publicKey: "", privateKey: "" });
+    const publicKey = keyPair.publicKey;
+    const privateKey = keyPair.privateKey;
+    const account = store.get("save-vanilla-plus-account", {});
+    const accountName = account;
+    console.log("account:" , account);
+    console.log("accountName:", accountName);
+
+    if (!wallet || !publicKey || !privateKey) {
+      console.error("Test auth-ping failed: Missing wallet or keys", { wallet, publicKey });
+      return { success: false, message: "Missing wallet or keys" };
+    }
+
+    const fakeData = {
+        "daily": {
+          "date": "2026-05-29",
+          "playerLog": "14:30:00",
+          "activity": "Battleground",
+          "completed": true
+        },
+        "weekly": {
+          "completed": true,
+          "week": "2026-W25",
+          "activity": "Raid",
+          "bossesKilled": {661: true},
+          "playerLog": "14:30:00"
+        },
+        "character": {
+          "charUID": "Player-6064-029BFDBC",
+          "log": {
+            "bgLog": {
+              "playerLog": "14:30:00",
+              "playerEnter": "14:30:00",
+              "date": "2026-05-29",
+              "completed": false,
+              "activity": "BattleGround"
+            },
+            "raidLog": {
+              "playerLog": "14:30:00",
+              "week": "2026-W25",
+              "playerEnter": "14:30:00",
+              "completed": false,
+              "activity": "Raid"
+            }
+          },
+          "faction": "Alliance",
+          "charName": "Pepegangster",
+          "class": "PALADIN",
+          "race": "Dwarf",
+          "serverName": "Dreamscythe"
+        },
+        "buttonPos": {
+          "y": -117.805229764653,
+          "x": -245.7679135473017,
+          "point": "TOPRIGHT",
+          "relativePoint": "TOPRIGHT"
+        },
+        "framePos": null
+      }
+    //   daily: {
+    //     date: "2025-05-31",
+    //     completed: true,
+    //     activity: "Battleground",
+    //     playerLog: "14:30:00"
+    //   },
+    //   weekly: {
+    //     week: "2025-W31",
+    //     completed: true,
+    //     activity: "Raid",
+    //     playerLog: "16:45:00",
+    //     bossesKilled: { "672": true, "673": true }
+    //   },
+    //   character: {
+    //     charUID: "Player-6103-029BFDBC",
+    //     charName: "Pepegangster",
+    //     serverName: "Dreamscythe",
+    //     class: "PALADIN",
+    //     race: "Dwarf",
+    //     faction: "Alliance",
+    //     log: {
+    //       bgLog: {
+    //         date: "2025-05-08",
+    //         playerEnter: "14:00:00",
+    //         playerLog: "14:30:00",
+    //         activity: "Alterac Valley",
+    //         completed: true
+    //       },
+    //       raidLog: {
+    //         week: "2025-W20",
+    //         playerEnter: "16:00:00",
+    //         playerLog: "16:45:00",
+    //         activity: "Molten Core",
+    //         completed: true
+    //       }
+    //     }
+    //   },
+    //   buttonPos: null,
+    //   framePos: null
+    // };
+    console.log("fake data:", fakeData);
+    const currentDate = new Date().toISOString().split("T")[0];
+    const currentWeek = getWeekNumber(new Date());
+    console.log("current week", currentWeek);
+
+    if (!store.has("vanillaPlusCompletionData")) store.set("vanillaPlusCompletionData", { daily: {}, weekly: {} });
+    if (!store.has("vanillaPlusFileCache")) store.set("vanillaPlusFileCache", { dailyFiles: [], weeklyFiles: [], count: 0 });
+    const vanillaPlusCompletionData = store.get("vanillaPlusCompletionData");
+    const vanillaPlusFileCache = store.get("vanillaPlusFileCache");
+    console.log("vanillaPlusCompletionData", vanillaPlusCompletionData);
+    console.log("vanillaPlusFileCache", vanillaPlusFileCache);
+
+    const dailyCompleted = fakeData.daily?.completed || false;
+    const weeklyCompleted = fakeData.weekly?.completed || false;
+    console.log("dailyCompleted", dailyCompleted);
+    console.log("weeklyCompleted", weeklyCompleted);
+    const dailyDate = fakeData.daily?.date || currentDate;
+    const weeklyWeek = fakeData.weekly?.week || currentWeek;
+    let newDaily = false;
+    let newWeekly = false;
+
+    const randomString = generateRandomString();
+
+    if (dailyCompleted && vanillaPlusCompletionData.daily[dailyDate] !== true) {
+      vanillaPlusCompletionData.daily[dailyDate] = true;
+      vanillaPlusFileCache.dailyFiles.push({
+        daily: {
+          ...fakeData.daily,
+          date: dailyDate,
+          accountName: accountName,
+          wallet: walletWallet,
+          randomString: randomString // Add random string
+        }
+      });
+      vanillaPlusFileCache.count += 1;
+      newDaily = true;
+    }
+
+    if (weeklyCompleted && vanillaPlusCompletionData.weekly[weeklyWeek] !== true) {
+      vanillaPlusCompletionData.weekly[weeklyWeek] = true;
+      vanillaPlusFileCache.weeklyFiles.push({
+        weekly: {
+          ...fakeData.weekly,
+          week: weeklyWeek,
+          accountName: accountName,
+          wallet: walletWallet,
+          randomString: randomString // Add random string
+        }
+      });
+      vanillaPlusFileCache.count += 1;
+      newWeekly = true;
+    }
+
+    let dailySuccess = false;
+    let weeklySuccess = false;
+
+
+
+    if (newDaily || newWeekly) {
+
+
+      if (newDaily) {
+        const dailyCache = { ...fakeData.daily, date: dailyDate, accountName: accountName, wallet: walletWallet, randomString: randomString};
+        const dailyUpload = {
+          game: "vanilla-plus",
+          type: "daily",
+          accountName : accountName,
+          wallet: walletWallet,
+          cache: dailyCache
+        };
+        console.log("logtoServer daily");
+        dailySuccess = await logToServer(dailyUpload);
+        mainWindow.webContents.send("log-update", {
+          success: dailySuccess,
+          message: dailySuccess ? "Fake daily completion logged!" : "Failed to log fake daily"
+        });
+      }
+
+      if (newWeekly) {
+        const weeklyCache = { ...fakeData.weekly, week: weeklyWeek, accountName: accountName, wallet: walletWallet, randomString: randomString };
+        const weeklyUpload = {
+          game: "vanilla-plus",
+          type: "weekly",
+          accountName : accountName,
+          wallet: walletWallet,
+          cache: weeklyCache
+        };
+        console.log("logtoServer weekly");
+        weeklySuccess = await logToServer(weeklyUpload);
+        mainWindow.webContents.send("log-update", {
+          success: weeklySuccess,
+          message: weeklySuccess ? "Fake weekly completion logged!" : "Failed to log fake weekly"
+        });
+      }
+      store.set("vanillaPlusFileCache", vanillaPlusFileCache);
+      store.set("vanillaPlusCompletionData", vanillaPlusCompletionData);
+      return {
+        success: dailySuccess && weeklySuccess,
+        message: (newDaily && newWeekly) ? "Fake daily & weekly test completed" : newDaily ? "Fake daily test completed" : "Fake weekly test completed"
+      };
+    } else {
+       console.log("no new data to test")
+      mainWindow.webContents.send("log-update", {
+        success: true,
+        message: "No new fake completions to log"
+      });
+      return { success: true, message: "No new fake data" };
+    }
+  } catch (err) {
+    console.error("Test auth-ping error:", { error: err.message });
+    mainWindow.webContents.send("log-update", {
+      success: false,
+      message: `Test auth-ping error: ${err.message}`
+    });
+    return { success: false, message: err.message };
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function checkRSAKeyPair(publicKey, privateKey) {
   try {
     // Validate PEM format
@@ -134,7 +386,7 @@ awIDAQAB
 
 const allowedServers = ["Dreamscythe", "NightSlayer", "Maladath"];
 const AddonHash = process.env.ADDONHASH || 'HARDCODED_ADDONHASH_PLACEHOLDER'; // this is .lua and .toc sha-256 hashed, added and sha-256 hashed once again. the order is a-z. so .luaHash + .tocHash = addonHash. dont fuck up retard... -10 million dolla
-const ADDON_NAME = "VanillaPlus"; // Hardcode your addon name here
+const ADDON_NAME = "Vanilla-Plus"; // Hardcode your addon name here
 const VanillaHash = process.env.VANILLAHASH || 'HARDCODED_VANILLAHASH_PLACEHOLDER';
 if (!serverPublicKey.includes('-----BEGIN PUBLIC KEY-----') || !serverPublicKey.includes('-----END PUBLIC KEY-----')) {
   console.error('Invalid serverPublicKey: Missing PEM headers');
@@ -205,6 +457,8 @@ if (isDev()) {
 let mainWindow = null;
 app.on("ready", async () => {
   mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 700,
       webPreferences: {
           preload: getPreloadPath(),
           contextIsolation: true,
@@ -1489,7 +1743,9 @@ async function logToServer(dataUpload) {
       throw err;
     }
 
-    const response = await fetch('http://vanilla-plus.com/api/auth-ping', {
+    // const response = await fetch('http://vanilla-plus.com/api/auth-ping', {
+      const response = await fetch('http://localhost:3000/api/auth-ping', {
+
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet, publicKey, signedMessage: encryptedPayload, game: dataUpload.game, type, cache: dataUpload.cache })
@@ -1499,6 +1755,7 @@ async function logToServer(dataUpload) {
       const errorText = await response.text();
       throw new Error(`Server error: ${response.status} - ${errorText}`);
     }
+    console.log("payload successfully recieved!")
     const { success } = await response.json();
     return success;
   } catch (err) {
@@ -1596,190 +1853,3 @@ ipcMain.handle("return-VanillaCache-Count", async () => {
 
 
 
-// ipcMain.handle("test-auth-ping", async () => {
-//   try {
-//     const wallet = store.get("wallet", null);
-//     console.log("wallet:", wallet);
-//     const walletWallet = wallet.wallet;
-//     console.log("walletWallet:", walletWallet);
-
-//     const keyPair = store.get("keys", { publicKey: "", privateKey: "" });
-//     const publicKey = keyPair.publicKey;
-//     const privateKey = keyPair.privateKey;
-//     const account = store.get("save-vanilla-plus-account", {});
-//     const accountName = account;
-//     console.log("account:" , account);
-//     console.log("accountName:", accountName);
-
-//     if (!wallet || !publicKey || !privateKey) {
-//       console.error("Test auth-ping failed: Missing wallet or keys", { wallet, publicKey });
-//       return { success: false, message: "Missing wallet or keys" };
-//     }
-
-//     const fakeData = {
-//       daily: {
-//         date: "2025-05-31",
-//         completed: true,
-//         activity: "Battleground",
-//         playerLog: "14:30:00"
-//       },
-//       weekly: {
-//         week: "2025-W31",
-//         completed: true,
-//         activity: "Raid",
-//         playerLog: "16:45:00",
-//         bossesKilled: { "672": true, "673": true }
-//       },
-//       character: {
-//         charUID: "Player-6103-029BFDBC",
-//         charName: "Pepegangster",
-//         serverName: "Dreamscythe",
-//         class: "PALADIN",
-//         race: "Dwarf",
-//         faction: "Alliance",
-//         log: {
-//           bgLog: {
-//             date: "2025-05-08",
-//             playerEnter: "14:00:00",
-//             playerLog: "14:30:00",
-//             activity: "Alterac Valley",
-//             completed: true
-//           },
-//           raidLog: {
-//             week: "2025-W20",
-//             playerEnter: "16:00:00",
-//             playerLog: "16:45:00",
-//             activity: "Molten Core",
-//             completed: true
-//           }
-//         }
-//       },
-//       buttonPos: null,
-//       framePos: null
-//     };
-//     console.log("fake data:", fakeData);
-//     const currentDate = new Date().toISOString().split("T")[0];
-//     const currentWeek = getWeekNumber(new Date());
-//     console.log("current week", currentWeek);
-
-//     if (!store.has("vanillaPlusCompletionData")) store.set("vanillaPlusCompletionData", { daily: {}, weekly: {} });
-//     if (!store.has("vanillaPlusFileCache")) store.set("vanillaPlusFileCache", { dailyFiles: [], weeklyFiles: [], count: 0 });
-//     const vanillaPlusCompletionData = store.get("vanillaPlusCompletionData");
-//     const vanillaPlusFileCache = store.get("vanillaPlusFileCache");
-//     console.log("vanillaPlusCompletionData", vanillaPlusCompletionData);
-//     console.log("vanillaPlusFileCache", vanillaPlusFileCache);
-
-//     const dailyCompleted = fakeData.daily?.completed || false;
-//     const weeklyCompleted = fakeData.weekly?.completed || false;
-//     console.log("dailyCompleted", dailyCompleted);
-//     console.log("weeklyCompleted", weeklyCompleted);
-//     const dailyDate = fakeData.daily?.date || currentDate;
-//     const weeklyWeek = fakeData.weekly?.week || currentWeek;
-//     let newDaily = false;
-//     let newWeekly = false;
-
-
-
-
-//     const randomString = generateRandomString();
-
-
-
-
-
-
-
-//     if (dailyCompleted && vanillaPlusCompletionData.daily[dailyDate] !== true) {
-//       vanillaPlusCompletionData.daily[dailyDate] = true;
-//       vanillaPlusFileCache.dailyFiles.push({
-//         daily: {
-//           ...fakeData.daily,
-//           date: dailyDate,
-//           accountName: accountName,
-//           wallet: walletWallet,
-//           randomString: randomString // Add random string
-//         }
-//       });
-//       vanillaPlusFileCache.count += 1;
-//       newDaily = true;
-//     }
-
-//     if (weeklyCompleted && vanillaPlusCompletionData.weekly[weeklyWeek] !== true) {
-//       vanillaPlusCompletionData.weekly[weeklyWeek] = true;
-//       vanillaPlusFileCache.weeklyFiles.push({
-//         weekly: {
-//           ...fakeData.weekly,
-//           week: weeklyWeek,
-//           accountName: accountName,
-//           wallet: walletWallet,
-//           randomString: randomString // Add random string
-//         }
-//       });
-//       vanillaPlusFileCache.count += 1;
-//       newWeekly = true;
-//     }
-
-//     let dailySuccess = false;
-//     let weeklySuccess = false;
-
-
-
-//     if (newDaily || newWeekly) {
-
-
-//       if (newDaily) {
-//         const dailyCache = { ...fakeData.daily, date: dailyDate, accountName: accountName, wallet: walletWallet, randomString: randomString};
-//         const dailyUpload = {
-//           game: "vanilla-plus",
-//           type: "daily",
-//           accountName : accountName,
-//           wallet: walletWallet,
-//           cache: dailyCache
-//         };
-//         console.log("logtoServer daily");
-//         dailySuccess = await logToServer(dailyUpload);
-//         mainWindow.webContents.send("log-update", {
-//           success: dailySuccess,
-//           message: dailySuccess ? "Fake daily completion logged!" : "Failed to log fake daily"
-//         });
-//       }
-
-//       if (newWeekly) {
-//         const weeklyCache = { ...fakeData.weekly, week: weeklyWeek, accountName: accountName, wallet: walletWallet, randomString: randomString };
-//         const weeklyUpload = {
-//           game: "vanilla-plus",
-//           type: "weekly",
-//           accountName : accountName,
-//           wallet: walletWallet,
-//           cache: weeklyCache
-//         };
-//         console.log("logtoServer weekly");
-//         weeklySuccess = await logToServer(weeklyUpload);
-//         mainWindow.webContents.send("log-update", {
-//           success: weeklySuccess,
-//           message: weeklySuccess ? "Fake weekly completion logged!" : "Failed to log fake weekly"
-//         });
-//       }
-//       store.set("vanillaPlusFileCache", vanillaPlusFileCache);
-//       store.set("vanillaPlusCompletionData", vanillaPlusCompletionData);
-//       return {
-//         success: dailySuccess && weeklySuccess,
-//         message: (newDaily && newWeekly) ? "Fake daily & weekly test completed" : newDaily ? "Fake daily test completed" : "Fake weekly test completed"
-//       };
-//     } else {
-//        console.log("no new data to test")
-//       mainWindow.webContents.send("log-update", {
-//         success: true,
-//         message: "No new fake completions to log"
-//       });
-//       return { success: true, message: "No new fake data" };
-//     }
-//   } catch (err) {
-//     console.error("Test auth-ping error:", { error: err.message });
-//     mainWindow.webContents.send("log-update", {
-//       success: false,
-//       message: `Test auth-ping error: ${err.message}`
-//     });
-//     return { success: false, message: err.message };
-//   }
-// });

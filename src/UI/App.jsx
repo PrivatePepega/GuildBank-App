@@ -19,21 +19,6 @@ function App() {
 
 
 
-  useEffect(() => {
-    console.log('TEST 1: useEffect running'); // Can you see this in DevTools?
-    console.log('TEST 2: window.electron exists?', !!window.electron);
-    console.log('TEST 3: onMainProcessLog exists?', !!window.electron?.onMainProcessLog);
-    console.log('TEST 4: notifyRendererReady exists?', !!window.electron?.notifyRendererReady);
-    
-    const cleanup = window.electron.onMainProcessLog((type, args) => {
-        console.log('TEST 5: IPC RECEIVED!!!', type, args); // Does this ever fire?
-    });
-    
-    window.electron.notifyRendererReady();
-    console.log('TEST 6: notifyRendererReady called');
-    
-    return cleanup;
-}, []);
 
 
 useEffect(() => {
@@ -94,15 +79,7 @@ useEffect(() => {
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
-  // const addItem = (item) => {
-  //   setSelectedItems((prev) => {
-  //     if (!prev.some((selected) => selected.id === item.id)) {
-  //       return [...prev, item];
-  //     }
-  //     return prev;
-  //   });
-  //   setIsOpen(false);
-  // };
+
   const addItem = (item) => {
     setSelectedItems((prev) => {
       if (!prev.some((id) => id === item.id)) {
@@ -112,9 +89,7 @@ useEffect(() => {
     });
     setIsOpen(false);
   };
-  // const removeItem = (id) => {
-  //   setSelectedItems((prev) => prev.filter((item) => item.id !== id));
-  // };
+
   const removeItem = (id) => {
     setSelectedItems((prev) => prev.filter((itemId) => itemId !== id));
   };
@@ -155,9 +130,7 @@ useEffect(() => {
     alert(wallet);
   };
 
-  const data = [
-    { "id": 1, "name": "Vanilla-Plus", "img": vanillaPlus, "path": vanillaPlusPath, "cacheCount": vanillaCache, "addon": "https://www.curseforge.com/wow/addons/vanilla-plus", "fileCount": "countOfFile", "gameExe": "WowClassic.exe", "account": vanillaPlusAccount }, // Renamed MMOPLUS to VanillaPlus
-  ];
+
   const freshData = [
     {
       id: 1,
@@ -166,7 +139,6 @@ useEffect(() => {
       path: vanillaPlusPath,
       cacheCount: vanillaCache,
       addon: "https://www.curseforge.com/wow/addons/vanilla-plus",
-      fileCount: "countOfFile",
       gameExe: "WowClassic.exe",
       account: vanillaPlusAccount,
     },
@@ -195,14 +167,14 @@ useEffect(() => {
   };
   const getVanillaCacheCount = async () => { // Renamed from playMmoPlus
     const cacheVanilla = await window.electron.getVanillaCacheCount();
-    console.log(cacheVanilla);
+    console.log("cache data: ", cacheVanilla);
     setVanillaCache(cacheVanilla);
   };
 
   
-  // const testPing = async () => { // Renamed from playMmoPlus
-  //   const ping = await window.electron.testPing();
-  // };
+  const testPing = async () => { // Renamed from playMmoPlus
+    const ping = await window.electron.testPing();
+  };
 
   // Force refresh selected items when source data changes
   useEffect(() => {
@@ -276,7 +248,7 @@ const [accountHelp, setAccountHelp] = useState(false);
 
             {isOpen && (
               <ul className="mt-2 border rounded-md shadow-md bg-white p-2 text-black">
-                {data.map((item) => (
+                {freshData.map((item) => (
                   <li
                     key={item.id}
                     onClick={() => addItem(item)}
@@ -318,7 +290,9 @@ const [accountHelp, setAccountHelp] = useState(false);
                         <div className="text-left w-60">
                           <button onClick={()=>findExe(item.id)}>locate .exe file</button>
                           <button onClick={()=>setExeHelp(!exeHelp)}>?</button>
-                          {exeHelp && <p className="m-5 italic">inside _classic_era_, click on {item.gameExe} </p>}
+                          {exeHelp && <p className="m-5 italic">
+                            open battle.net, click the gear, locate game folder, inside _anniversary_, click, {item.gameExe}
+                            </p>}
                           <span className="w-full break-words block">{item.path}</span>
                         </div>
                         <div>
@@ -340,7 +314,9 @@ const [accountHelp, setAccountHelp] = useState(false);
                             <button onClick={()=>setAccountHelp(!accountHelp)} className="">?</button>
                             <span>Account: {item.account}</span>
                           </div>
-                          {accountHelp && <p className="italic">input account# you're logging in, _classic_era_~WTF~Account</p>}
+                          {accountHelp && <p className="italic">
+                            input account# you're logging into, inside _anniversary_~WTF~Account
+                            </p>}
                         </div>
                       </div>
                     </div>
@@ -356,6 +332,7 @@ const [accountHelp, setAccountHelp] = useState(false);
               })}
             </ul>
           </div>
+          <button onClick={()=>testPing()}>test ping</button>
           {version && <p>release number: {version}</p> }
           <p>www.guildbank.biz</p>
         </div>
