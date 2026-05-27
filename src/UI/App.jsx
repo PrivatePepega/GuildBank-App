@@ -118,6 +118,8 @@ useEffect(() => {
   
   const playVanillaPlus = async () => { // Renamed from playMmoPlus
     await window.electron.playVanillaPlus();
+    await getVanillaCacheCount();
+
   };
 
   const showPublic = () => {
@@ -152,6 +154,7 @@ useEffect(() => {
       const exported = await window.electron.exportVanillaPlusFiles();
       if(exported){
         console.log("exported", exported);
+        await getVanillaCacheCount();
       }
     }
 
@@ -174,6 +177,7 @@ useEffect(() => {
   
   const testPing = async () => { // Renamed from playMmoPlus
     const ping = await window.electron.testPing();
+    await getVanillaCacheCount();
   };
 
   // Force refresh selected items when source data changes
