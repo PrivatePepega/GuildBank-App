@@ -5,6 +5,7 @@ Hello chat,
 
 You get to play by going into releases which is in the right side panel of the screen.
 Download the latest version for your OS.
+This app only works for TBC anniversary.
 
 Download, double click, run.
 Once open you gm and input your wallet address,
