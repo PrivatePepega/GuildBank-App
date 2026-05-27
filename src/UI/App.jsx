@@ -330,7 +330,11 @@ const [accountHelp, setAccountHelp] = useState(false);
                         {item.cacheCount}
                       </div>
                     </div>
-                    <button onClick={()=>playGame(item.id)} className="w-full my-3">play</button>
+                    {item.cacheCount < 20 ? (
+                      <button onClick={()=>playGame(item.id)} className="w-full my-3">play</button>
+                    ) : (
+                      <p className="w-full my-3 text-sm italic">cache count is 20+ you need to mint dawg</p>
+                    )}
                   </li>
                 );
               })}
