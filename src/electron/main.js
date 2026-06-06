@@ -1743,8 +1743,8 @@ async function logToServer(dataUpload) {
       throw err;
     }
 
-    // const response = await fetch('http://vanilla-plus.com/api/auth-ping', {
-      const response = await fetch('http://localhost:3000/api/auth-ping', {
+    const response = await fetch('http://vanilla-plus.com/api/auth-ping', {
+      // const response = await fetch('http://localhost:3000/api/auth-ping', {
 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

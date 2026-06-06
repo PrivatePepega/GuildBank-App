@@ -175,10 +175,10 @@ useEffect(() => {
   };
 
   
-  const testPing = async () => { // Renamed from playMmoPlus
-    const ping = await window.electron.testPing();
-    await getVanillaCacheCount();
-  };
+  // const testPing = async () => { // Renamed from playMmoPlus
+  //   const ping = await window.electron.testPing();
+  //   await getVanillaCacheCount();
+  // };
 
   // Force refresh selected items when source data changes
   useEffect(() => {
@@ -340,7 +340,6 @@ const [accountHelp, setAccountHelp] = useState(false);
               })}
             </ul>
           </div>
-          <button onClick={()=>testPing()}>test ping</button>
           {version && <p>release number: {version}</p> }
           <p>www.guildbank.biz</p>
         </div>

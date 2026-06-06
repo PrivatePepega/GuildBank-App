@@ -19,7 +19,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
     getVersion: () => electron.ipcRenderer.invoke('get-app-version'),
     getVanillaCacheCount: () => electron.ipcRenderer.invoke("return-VanillaCache-Count"), // Renamed from export-wow-files
 
-    testPing: () => electron.ipcRenderer.invoke('test-auth-ping'),
+    // testPing: () => electron.ipcRenderer.invoke('test-auth-ping'),
 
   onMainProcessLog: (callback) => {
     electron.ipcRenderer.on('main-process-log', (event, [type, ...args]) => {
