@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import './App.css';
 import vanillaPlus from "./assets/vanillaPlus.jpg"; // Renamed from mmoPlus.jpg
-
+import logo from './assets/guildbanklogo white-01.png'
 function App() {
   const [gm, setGm] = useState(false);
 
@@ -347,6 +347,9 @@ const [accountHelp, setAccountHelp] = useState(false);
 
       {!gm &&
         <div className=''>
+          <div>
+            <img src={logo} alt="logo" className='w-auto h-auto max-w-[300px] max-h-[300px] rounded-md object-contain mx-auto mb-5'/>
+          </div>
           <div>
             gm fren,
           </div>
