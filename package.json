@@ -62,7 +62,7 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:react dev:electron",
     "dev:react": "vite",
-    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "dev:electron": "cross-env NODE_ENV=development ow-electron .",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -74,7 +74,7 @@
     "gen:yml:win": "node scripts/generate-latest-yml.js win",
     "gen:yml:mac": "node scripts/generate-latest-yml.js mac",
     "gen:yml:linux": "node scripts/generate-latest-yml.js linux"
-   },
+  },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.6",
     "crypto": "^1.0.1",
@@ -94,6 +94,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@overwolf/ow-electron": "^39.6.1",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
@@ -108,5 +109,10 @@
     "globals": "^15.14.0",
     "npm-run-all": "^4.1.5",
     "vite": "^6.1.0"
-  }
+  },
+  "overwolf": {
+    "packages": [
+      "gep"
+    ]
+}
 }
