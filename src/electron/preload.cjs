@@ -33,4 +33,14 @@ electron.contextBridge.exposeInMainWorld("electron", {
     notifyRendererReady: () => {
         electron.ipcRenderer.send('renderer-ready');
     },
+
+
+
+
+    onLogUpdate: (callback) => {
+        electron.ipcRenderer.on('log-update', (event, data) => callback(data));
+        return () => electron.ipcRenderer.removeAllListeners('log-update');
+    }
+
 });
+

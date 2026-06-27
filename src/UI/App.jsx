@@ -1,367 +1,183 @@
 import { useState, useEffect } from "react";
-import './App.css';
-import vanillaPlus from "./assets/vanillaPlus.jpg"; // Renamed from mmoPlus.jpg
-import logo from './assets/guildbanklogo white-01.png'
+import "./App.css";
+
+import GmSplash from "./components/GmSplash";
+import TopBar from "./components/TopBar";
+import SettingsPanel from "./components/SettingsPanel";
+import GameSelector from "./components/GameSelector";
+import GameCard from "./components/GameCard";
+import WowCard from "./components/WowCard";
+
 function App() {
   const [gm, setGm] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [publicKey, setPublicKey] = useState('');
-  const [PublicKeyData, setPublicKeyData] = useState("");
-  const [privateKey, setPrivateKey] = useState('');
-  const [privateKeyData, setPrivateKeyData] = useState();
-
-  const [inputWallet, setInputWallet] = useState('');
+  // ── Wallet / Keys ──────────────────────────────────────────────
   const [wallet, setWallet] = useState("");
+  const [publicKeyData, setPublicKeyData] = useState("");
+  const [privateKeyData, setPrivateKeyData] = useState("");
 
-  const [inputVanillaPlusAccount, setInputVanillaPlusAccount] = useState(""); // Renamed from inputMmoPlusAccount
-  const [vanillaPlusAccount, setVanillaPlusAccount] = useState(""); // Renamed from mmoPlusAccount
-  const [vanillaCache, setVanillaCache] = useState();
+  // ── WoW ────────────────────────────────────────────────────────
+  const [vanillaPlusPath, setVanillaPlusPath] = useState("");
+  const [vanillaCache, setVanillaCache] = useState(0);
 
+  // ── Game selector ──────────────────────────────────────────────
+  const [activeGame, setActiveGame] = useState(null);
 
+  // ── Misc ───────────────────────────────────────────────────────
+  const [version, setVersion] = useState("");
 
+  // Derived: are wallet + keys ready?
+  const isReady = !!wallet && !!publicKeyData && !!privateKeyData;
 
-
-useEffect(() => {
-  getVanillaPlusPath();
-  fetchWallet();
-  fetchKeys();
-  getSavedVanillaPlusAccount();
-  getVersion();
-  getVanillaCacheCount();
-
-  const cleanup = window.electron.onMainProcessLog((type, args) => {
-      if (type === 'log') {
-          console.log('[Main]', ...args);
-      } else if (type === 'error') {
-          console.error('[Main]', ...args);
-      }
-  });
-
-  window.electron.notifyRendererReady();
-
-  return cleanup;
-}, []);
-
-  const fetchWallet = async () => {
-    const savedWallet = await window.electron.getWallet();
-    setWallet(savedWallet.wallet);
-  };
-  const saveWallet = async () => {
-    const result = await window.electron.saveWallet({ wallet: inputWallet });
-    fetchWallet();
-  };
-  const fetchKeys = async () => {
-    const savedKeys = await window.electron.getKeys();
-    setPublicKeyData(savedKeys.publicKey);
-    setPrivateKeyData(savedKeys.privateKey);
-  };
-  const saveKeys = async () => {
-    const keysData = {
-      publicKey,
-      privateKey,
-    };
-    const result = await window.electron.saveKeys(keysData);
-    fetchKeys();
-  };
-
-  const saveVanillaPlusAccount = async () => { // Renamed from saveMmoPlusAccount
-    const result = await window.electron.saveVanillaPlusAccount(inputVanillaPlusAccount);
-    getSavedVanillaPlusAccount();
-  };
-  const getSavedVanillaPlusAccount = async () => { // Renamed from getSavedMmoPlusAccount
-    const account = await window.electron.getVanillaPlusAccount();
-    setVanillaPlusAccount(account);
-    console.log("account id", account);
-  };
-
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const addItem = (item) => {
-    setSelectedItems((prev) => {
-      if (!prev.some((id) => id === item.id)) {
-        return [...prev, item.id];
-      }
-      return prev;
-    });
-    setIsOpen(false);
-  };
-
-  const removeItem = (id) => {
-    setSelectedItems((prev) => prev.filter((itemId) => itemId !== id));
-  };
-  const findExe = (itemId) => {
-    if (itemId === 1) {
-      selectVanillaPlusPath(); // Renamed from selectMmoPlusPath
-    }
-  };
+//  Playing State Loading
+const [isPlaying, setIsPlaying] = useState(false);
+const [playingGameName, setPlayingGameName] = useState("");
 
 
-  const playGame = (itemId) => {
-    if (itemId === 1) {
-      playVanillaPlus(); // Renamed from playMmoPlus
-    }
-  };
-
-  const [vanillaPlusPath, setVanillaPlusPath] = useState(""); // Renamed from mmoPlusPath
-  const getVanillaPlusPath = async () => { // Renamed from getMmoPlusPath
-    const name = await window.electron.getVanillaPlusPath();
-    setVanillaPlusPath(name);
-  };
-  const selectVanillaPlusPath = async () => { // Renamed from selectMmoPlusPath
-    const path = await window.electron.selectVanillaPlusPath();
-    if (path) setVanillaPlusPath(path);
-  };
-  
-  const playVanillaPlus = async () => { // Renamed from playMmoPlus
-    await window.electron.playVanillaPlus();
-    await getVanillaCacheCount();
-
-  };
-
-  const showPublic = () => {
-    alert(PublicKeyData);
-  };
-  const showPrivate = () => {
-    alert(privateKeyData); // Fixed to show privateKeyData instead of PublicKeyData
-  };
-  const showWallet = () => {
-    alert(wallet);
-  };
-
-
-  const freshData = [
-    {
-      id: 1,
-      name: "Vanilla-Plus",
-      img: vanillaPlus,
-      path: vanillaPlusPath,
-      cacheCount: vanillaCache,
-      addon: "https://www.curseforge.com/wow/addons/vanilla-plus",
-      gameExe: "WowClassic.exe",
-      account: vanillaPlusAccount,
-    },
-  ];
-
-
-
-
-  const exportFile = async (itemId) => {
-    if(itemId == 1){
-      const exported = await window.electron.exportVanillaPlusFiles();
-      if(exported){
-        console.log("exported", exported);
-        await getVanillaCacheCount();
-      }
-    }
-
-  };
-
-
-
-  const [version, setVersion] = useState();
-
-  const getVersion = async () => { // Renamed from playMmoPlus
-    const version = await window.electron.getVersion();
-    setVersion(version);
-  };
-  const getVanillaCacheCount = async () => { // Renamed from playMmoPlus
-    const cacheVanilla = await window.electron.getVanillaCacheCount();
-    console.log("cache data: ", cacheVanilla);
-    setVanillaCache(cacheVanilla);
-  };
-
-  
-  // const testPing = async () => { // Renamed from playMmoPlus
-  //   const ping = await window.electron.testPing();
-  //   await getVanillaCacheCount();
-  // };
-
-  // Force refresh selected items when source data changes
+  // ── Boot ───────────────────────────────────────────────────────
   useEffect(() => {
-    // This is enough because we now use freshData on render
-  }, [vanillaPlusPath, vanillaPlusAccount, vanillaCache]);
+    (async () => {
+      await Promise.all([
+        fetchWallet(),
+        fetchKeys(),
+        fetchVanillaPlusPath(),
+        fetchVanillaCache(),
+        fetchVersion(),
+      ]);
+      window.electron.notifyRendererReady();
+    })();
+  
+    const cleanupLog = window.electron.onMainProcessLog((type, args) => {
+      if (type === "log") console.log("[Main]", ...args);
+      else if (type === "error") console.error("[Main]", ...args);
+    });
+  
+    const cleanupLogUpdate = window.electron.onLogUpdate(async (data) => {
+      console.log("[App] log-update received:", data);
+      setIsPlaying(false);
+      setPlayingGameName("");
+      await fetchVanillaCache();
+    });
+  
+    return () => {
+      cleanupLog();
+      cleanupLogUpdate();
+    };
+  }, []);
 
+  // ── Fetchers ───────────────────────────────────────────────────
+  const fetchWallet = async () => {
+    const saved = await window.electron.getWallet();
+    setWallet(saved.wallet);
+  };
 
-const [exeHelp, setExeHelp] = useState(false);
-const [accountHelp, setAccountHelp] = useState(false);
+  const fetchKeys = async () => {
+    const saved = await window.electron.getKeys();
+    setPublicKeyData(saved.publicKey);
+    setPrivateKeyData(saved.privateKey);
+  };
 
+  const fetchVanillaPlusPath = async () => {
+    const p = await window.electron.getVanillaPlusPath();
+    setVanillaPlusPath(p);
+  };
 
+  const fetchVanillaCache = async () => {
+    const count = await window.electron.getVanillaCacheCount();
+    setVanillaCache(count);
+  };
 
+  const fetchVersion = async () => {
+    const v = await window.electron.getVersion();
+    setVersion(v);
+  };
+
+  // ── Handlers passed down ───────────────────────────────────────
+  const handleKeySave = async ({ publicKey, privateKey }) => {
+    await window.electron.saveKeys({ publicKey, privateKey });
+    await fetchKeys();
+  };
+
+  const handleWalletSave = async (inputWallet) => {
+    await window.electron.saveWallet({ wallet: inputWallet });
+    await fetchWallet();
+  };
+
+  const handleSelectVanillaPlusPath = async () => {
+    const p = await window.electron.selectVanillaPlusPath();
+    if (p) setVanillaPlusPath(p);
+  };
+
+  const handlePlayVanillaPlus = () => {
+    setIsPlaying(true);
+    setPlayingGameName("World of Warcraft");
+    window.electron.playVanillaPlus();
+  };
+
+  const handleExportVanillaPlus = async () => {
+    await window.electron.exportVanillaPlusFiles();
+    await fetchVanillaCache();
+  };
+
+  // ── Render ─────────────────────────────────────────────────────
+  if (!gm) {
+    return <GmSplash onConfirm={() => setGm(true)} />;
+  }
 
   return (
-    <>
-      {gm && 
-        <div className=''>
-          <div className='flex flex-row justify-between'>
-            <div>
-              <div>
-                <div>
-                  publicKey: <button onClick={()=>{showPublic()}}>show publickey</button>
-                </div>
-                <input
-                  type="text"
-                  value={publicKey}
-                  label="typo da public key"
-                  onChange={(e) => setPublicKey(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Type something..."
-                />   
-              </div>
-              <div>
-                <div>
-                  privateKey: <button onClick={()=>{showPrivate()}}>show privatekey</button>
-                </div>
-                <input
-                  type="text"
-                  value={privateKey}
-                  label="typo da private key"
-                  onChange={(e) => setPrivateKey(e.target.value)}
-                  placeholder="Type something..."
-                />   
-              </div>
-              <button onClick={()=>saveKeys()}>Save</button>
-            </div>
-            <div>
-              <div>
-                Wallet: <button onClick={()=>{showWallet()}}>show wallet</button>
-              </div>
-              <input
-                type="text"
-                value={inputWallet}
-                label="typo da wallet"
-                onChange={(e) => setInputWallet(e.target.value)}
-                placeholder="Type something..."
-              />   
-              <button onClick={()=>saveWallet()}>Save</button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+      <TopBar
+        settingsOpen={settingsOpen}
+        onToggleSettings={() => setSettingsOpen(!settingsOpen)}
+      />
 
-          <div>
-            <div>
-              <button
-                onClick={toggleMenu}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md shadow-md hover:bg-blue-600"
-              >
-                Open Menu
-              </button>     
-            </div>
+      <SettingsPanel
+        open={settingsOpen}
+        isReady={isReady}
+        onKeySave={handleKeySave}
+        onWalletSave={handleWalletSave}
+      />
 
-            {isOpen && (
-              <ul className="mt-2 border rounded-md shadow-md bg-white p-2 text-black">
-                {freshData.map((item) => (
-                  <li
-                    key={item.id}
-                    onClick={() => addItem(item)}
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-200"
-                  >
-                    {item.name}
-                  </li>
-                ))}
-              </ul>
-            )}
+      <main className="flex-1 flex flex-col items-center px-8 py-8 gap-8 overflow-y-auto">
+        <GameSelector activeGame={activeGame} onSelect={setActiveGame} />
 
-            <ul className="mt-5 w-[600px] border rounded-md p-2">
-              {selectedItems.map((itemId) => {
-                const item = freshData.find(d => d.id === itemId);
-                if (!item) return null;
+        {activeGame?.isWow && (
+          <WowCard
+            isReady={isReady}
+            vanillaPlusPath={vanillaPlusPath}
+            onSelectPath={handleSelectVanillaPlusPath}
+            vanillaCache={vanillaCache}
+            onPlay={handlePlayVanillaPlus}
+            onExport={handleExportVanillaPlus}
+            isPlaying={isPlaying}
+            playingGameName={playingGameName}
+          />
+        )}
 
-                return (
-                  <li key={item.id} className="px-4 py-2 border-b ">
-                    <p className="text-xl font-bold mb-4">
-                      {item.name}
-                    </p>
-                    <div className='flex items-center justify-between gap-4'>
-                      <div>
-                        <img src={item.img} alt="pic" className='w-auto h-auto max-w-[140px] max-h-[140px] rounded-md object-contain mx-auto'/>
-                        <button onClick={() => removeItem(item.id)} className="w-full">
-                          Remove
-                        </button>
-                      </div>
+        {/* {activeGame && !activeGame.isWow && (
+          <GameCard
+            game={activeGame}
+            isReady={isReady}
+            isPlaying={isPlaying}
+            playingGameName={playingGameName}
+            onPlay={() => {
+              setIsPlaying(true);
+              setPlayingGameName(activeGame.name);
+              window.electron.playGame(activeGame.id);
+            }}
+          />
+        )} */}
+      </main>
 
-                      <div className='flex flex-col'>
-                        <div className='flex items-center'>
-                          <p className="font-bold text-lg">
-                            Addon:
-                          </p>
-                          <span>
-                            {item.addon}
-                          </span>
-                        </div>
-                        <div className="text-left w-60">
-                          <button onClick={()=>findExe(item.id)}>locate .exe file</button>
-                          <button onClick={()=>setExeHelp(!exeHelp)}>?</button>
-                          {exeHelp && <p className="m-5 italic">
-                            open battle.net, click the gear, locate game folder, inside _anniversary_, click, {item.gameExe}
-                            </p>}
-                          <span className="w-full break-words block">{item.path}</span>
-                        </div>
-                        <div>
-                          <div className="flex">
-                            <button 
-                              onClick={() => saveVanillaPlusAccount()} 
-                              // Note: you were passing vanillaPlusAccount which is wrong
-                            >
-                              save
-                            </button>
-                            <input
-                              type="text"
-                              value={inputVanillaPlusAccount}
-                              onChange={(e) => setInputVanillaPlusAccount(e.target.value)}
-                              placeholder="Account Number"
-                            />  
-                          </div>
-                          <div className="flex items-center">
-                            <button onClick={()=>setAccountHelp(!accountHelp)} className="">?</button>
-                            <span>Account: {item.account}</span>
-                          </div>
-                          {accountHelp && <p className="italic">
-                            input account# you're logging into, inside _anniversary_~WTF~Account
-                            </p>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-row items-center justify-start gap-4">
-                      <button onClick={()=>exportFile(item.id)} className="w-30 text-xs">export cache</button>
-                      <div>
-                        {item.cacheCount}
-                      </div>
-                    </div>
-                    {item.cacheCount < 20 ? (
-                      <button onClick={()=>playGame(item.id)} className="w-full my-3">play</button>
-                    ) : (
-                      <p className="w-full my-3 text-sm italic">cache count is 20+ you need to mint dawg</p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          {version && <p>release number: {version}</p> }
-          <p>www.guildbank.biz</p>
-        </div>
-      }
-
-      {!gm &&
-        <div className=''>
-          <div>
-            <img src={logo} alt="logo" className='w-auto h-auto max-w-[300px] max-h-[300px] rounded-md object-contain mx-auto mb-5'/>
-          </div>
-          <div>
-            gm fren,
-          </div>
-          <div>
-            say it back,
-          </div>
-          <div>
-            <button onClick={()=>setGm(true)}>gm.</button>
-          </div>
-        </div>
-      }
-    </>
+      <footer className="px-8 py-3 border-t border-gray-800 flex items-center justify-between">
+        <span className="text-xs text-gray-700">www.guildbank.biz</span>
+        {version && <span className="text-xs text-gray-600">v{version}</span>}
+        {!isReady && (
+          <span className="text-xs text-yellow-600">⚠ Set wallet & keys to enable play</span>
+        )}
+      </footer>
+    </div>
   );
 }
 

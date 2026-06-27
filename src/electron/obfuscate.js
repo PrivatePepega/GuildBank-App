@@ -25,9 +25,12 @@ let code = fs.readFileSync(inputFile, 'utf8');
 // Replace placeholders with SECRET and GH_TOKEN from .env
 const secret = process.env.SECRET;
 const ghToken = process.env.GH_TOKEN;
-const AddonHash = process.env.ADDONHASH;
-const VanillaHash = process.env.VANILLAHASH;
-
+// const AddonHash = process.env.ADDONHASH;
+// const VanillaHash = process.env.VANILLAHASH;
+const awsRegion = process.env.AWS_REGION;
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const awsSecretId = process.env.AWS_SECRET_ID;
 
 
 if (!secret) {
@@ -38,15 +41,18 @@ if (!ghToken) {
   console.error('Error: GH_TOKEN not found in .env');
   process.exit(1);
 }
-if (!AddonHash) {
-  console.error('Error: AddonHash not found in .env');
-  process.exit(1);
-}
-if (!VanillaHash) {
-  console.error('Error: VanillaHash not found in .env');
-  process.exit(1);
-}
-
+// if (!AddonHash) {
+//   console.error('Error: AddonHash not found in .env');
+//   process.exit(1);
+// }
+// if (!VanillaHash) {
+//   console.error('Error: VanillaHash not found in .env');
+//   process.exit(1);
+// }
+if (!awsRegion) { console.error('Error: AWS_REGION not found in .env'); process.exit(1); }
+if (!awsAccessKeyId) { console.error('Error: AWS_ACCESS_KEY_ID not found in .env'); process.exit(1); }
+if (!awsSecretAccessKey) { console.error('Error: AWS_SECRET_ACCESS_KEY not found in .env'); process.exit(1); }
+if (!awsSecretId) { console.error('Error: AWS_SECRET_ID not found in .env'); process.exit(1); }
 
 
 
@@ -55,8 +61,14 @@ if (!VanillaHash) {
 
 code = code.replace("'HARDCODED_SECRET_PLACEHOLDER'", `'${secret}'`);
 code = code.replace("'HARDCODED_GH_TOKEN_PLACEHOLDER'", `'${ghToken}'`);
-code = code.replace("'HARDCODED_ADDONHASH_PLACEHOLDER'", `'${AddonHash}'`);
-code = code.replace("'HARDCODED_VANILLAHASH_PLACEHOLDER'", `'${VanillaHash}'`);
+// code = code.replace("'HARDCODED_ADDONHASH_PLACEHOLDER'", `'${AddonHash}'`);
+// code = code.replace("'HARDCODED_VANILLAHASH_PLACEHOLDER'", `'${VanillaHash}'`);
+code = code.replace("'HARDCODED_AWS_REGION_PLACEHOLDER'", `'${awsRegion}'`);
+code = code.replace("'HARDCODED_AWS_ACCESS_KEY_ID_PLACEHOLDER'", `'${awsAccessKeyId}'`);
+code = code.replace("'HARDCODED_AWS_SECRET_ACCESS_KEY_PLACEHOLDER'", `'${awsSecretAccessKey}'`);
+code = code.replace("'HARDCODED_AWS_SECRET_ID_PLACEHOLDER'", `'${awsSecretId}'`);
+
+
 
 
 // Obfuscate using js-confusern

@@ -16,6 +16,9 @@ import https from "https";
 // import * as openpgp from 'openpgp';
 import dotenv from 'dotenv';
 import log from "electron-log";
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import inspector from 'inspector';
+import { performance } from 'perf_hooks';
 
 
 
@@ -29,6 +32,25 @@ if (isDev()) {
 
 
 
+const secretsManager = new SecretsManagerClient({
+  region: process.env.AWS_REGION || 'HARDCODED_AWS_REGION_PLACEHOLDER',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'HARDCODED_AWS_ACCESS_KEY_ID_PLACEHOLDER',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'HARDCODED_AWS_SECRET_ACCESS_KEY_PLACEHOLDER',
+  },
+});
+
+async function getSecrets() {
+  try {
+    const command = new GetSecretValueCommand({ SecretId: process.env.AWS_SECRET_ID || 'HARDCODED_AWS_SECRET_ID_PLACEHOLDER' });
+    const data = await secretsManager.send(command);
+    if ('SecretString' in data) return JSON.parse(data.SecretString);
+    throw new Error('Secrets not found');
+  } catch (err) {
+    console.error('SecretsManager error:', { error: err.message });
+    throw err;
+  }
+}
 
 
 
@@ -385,9 +407,9 @@ awIDAQAB
 -----END PUBLIC KEY-----`;
 
 const allowedServers = ["Dreamscythe", "NightSlayer", "Maladath"];
-const AddonHash = process.env.ADDONHASH || 'HARDCODED_ADDONHASH_PLACEHOLDER'; // this is .lua and .toc sha-256 hashed, added and sha-256 hashed once again. the order is a-z. so .luaHash + .tocHash = addonHash. dont fuck up retard... -10 million dolla
+// const AddonHash = process.env.ADDONHASH || 'HARDCODED_ADDONHASH_PLACEHOLDER'; // this is .lua and .toc sha-256 hashed, added and sha-256 hashed once again. the order is a-z. so .luaHash + .tocHash = addonHash. dont fuck up retard... -10 million dolla
 const ADDON_NAME = "Vanilla-Plus"; // Hardcode your addon name here
-const VanillaHash = process.env.VANILLAHASH || 'HARDCODED_VANILLAHASH_PLACEHOLDER';
+// const VanillaHash = process.env.VANILLAHASH || 'HARDCODED_VANILLAHASH_PLACEHOLDER';
 if (!serverPublicKey.includes('-----BEGIN PUBLIC KEY-----') || !serverPublicKey.includes('-----END PUBLIC KEY-----')) {
   console.error('Invalid serverPublicKey: Missing PEM headers');
   throw new Error('Invalid serverPublicKey');
@@ -1458,9 +1480,11 @@ ipcMain.handle("play-vanilla-plus", async () => {
 
     // Integrity check
     const currentHash = await hashFolder(yourAddonPath);
+    const { wowTBCAddonHash, wowTBCExeHash } = await getSecrets();
+
     console.log("Current hash:", currentHash); // Log computed hash
-    console.log("Expected hash:", AddonHash); // Log expected hash
-    if (currentHash !== AddonHash) {
+    console.log("Expected hash:", wowTBCAddonHash); // Log expected hash
+    if (currentHash !== wowTBCAddonHash) {
       console.log("addon hash error");
       mainWindow.webContents.send("log-update", {
         success: false,
@@ -1484,8 +1508,8 @@ ipcMain.handle("play-vanilla-plus", async () => {
 
    const userVanillaHash = await hashFile(vanillaPlusPath);
    console.log("user .exe hash is", userVanillaHash);
-   console.log("expected app .exe hash is", VanillaHash);
-    if(userVanillaHash != VanillaHash){
+   console.log("expected app .exe hash is", wowTBCExeHash);
+    if(userVanillaHash != wowTBCExeHash){
       console.log(".exe conspiracy found;");
       mainWindow.webContents.send("log-update", {
         success: false,
@@ -1552,122 +1576,116 @@ ipcMain.handle("play-vanilla-plus", async () => {
 
 
 
-      const currentDate = new Date().toISOString().split("T")[0];
-      const currentWeek = getWeekNumber(new Date());
-      console.log("current week", currentWeek);
-      if (!store.has("vanillaPlusCompletionData")) store.set("vanillaPlusCompletionData", { daily: {}, weekly: {} });
-      if (!store.has("vanillaPlusFileCache")) store.set("vanillaPlusFileCache", { dailyFiles: [], weeklyFiles: [], count: 0 });
-      const vanillaPlusCompletionData = store.get("vanillaPlusCompletionData");
-      const vanillaPlusFileCache = store.get("vanillaPlusFileCache");
-      console.log("vanillaPlusCompletionData", vanillaPlusCompletionData);
-      console.log("vanillaPlusFileCache", vanillaPlusFileCache);
-      const dailyCompleted = dataObj.daily?.completed || false;
-      const weeklyCompleted = dataObj.weekly?.completed || false;
-      const dailyDate = dataObj.daily?.date || currentDate;
-      const weeklyWeek = dataObj.weekly?.week || currentWeek;
-      let newDaily = false;
-      let newWeekly = false;
-      const account = store.get("save-vanilla-plus-account", {});
-      const userPaswordAdded = processKeysIntoPassword(publicKey, privateKey);
-      const addingPassword = account +  userPaswordAdded;
-      const accountHash = crypto.createHash('sha256').update(addingPassword).digest('hex');
-      const accountName = accountHash;
-      console.log("account: " , account);
-      console.log("accountName hashed: ", accountName);
-      const wallet = store.get("wallet", null);
-      console.log("wallet: ", wallet);
-      const walletWallet = wallet.wallet;
-      console.log("walletWallet: ", walletWallet);
+    const currentDate = new Date().toISOString().split("T")[0];
+    const currentWeek = getWeekNumber(new Date());
+    console.log("current week", currentWeek);
+    if (!store.has("vanillaPlusCompletionData")) store.set("vanillaPlusCompletionData", { daily: {}, weekly: {} });
+    if (!store.has("vanillaPlusFileCache")) store.set("vanillaPlusFileCache", { dailyFiles: [], weeklyFiles: [], count: 0 });
+    const vanillaPlusCompletionData = store.get("vanillaPlusCompletionData");
+    const vanillaPlusFileCache = store.get("vanillaPlusFileCache");
+    console.log("vanillaPlusCompletionData", vanillaPlusCompletionData);
+    console.log("vanillaPlusFileCache", vanillaPlusFileCache);
+    const dailyCompleted = dataObj.daily?.completed || false;
+    const weeklyCompleted = dataObj.weekly?.completed || false;
+    const dailyDate = dataObj.daily?.date || currentDate;
+    const weeklyWeek = dataObj.weekly?.week || currentWeek;
+    // newDaily / newWeekly now just mean "eligible to attempt", not "already recorded"
+    const newDaily = dailyCompleted && vanillaPlusCompletionData.daily[dailyDate] !== true;
+    const newWeekly = weeklyCompleted && vanillaPlusCompletionData.weekly[weeklyWeek] !== true;
+    const account = store.get("save-vanilla-plus-account", {});
+    const userPaswordAdded = processKeysIntoPassword(publicKey, privateKey);
+    const addingPassword = account + userPaswordAdded;
+    const accountHash = crypto.createHash('sha256').update(addingPassword).digest('hex');
+    const accountName = accountHash;
+    console.log("account: ", account);
+    console.log("accountName hashed: ", accountName);
+    const wallet = store.get("wallet", null);
+    console.log("wallet: ", wallet);
+    const walletWallet = wallet.wallet;
+    console.log("walletWallet: ", walletWallet);
 
+    let dailySuccess = false;
+    let weeklySuccess = false;
 
-
-      if (dailyCompleted && vanillaPlusCompletionData.daily[dailyDate] !== true) {
-        vanillaPlusCompletionData.daily[dailyDate] = true;
-        vanillaPlusFileCache.dailyFiles.push({
-          daily: {
+    if (newDaily || newWeekly) {
+      if (newDaily && isLegitCheck) {
+        const dailyUpload = {
+          game: "vanilla-plus",
+          type: "daily",
+          accountName: accountName,
+          wallet: walletWallet,
+          cache: {
             ...dataObj.daily,
             date: dailyDate,
             accountName: accountName,
             wallet: walletWallet,
-            randomString: randomString // Add random string
+            randomString: randomString
           }
+        };
+        dailySuccess = await logToServer(dailyUpload);
+
+        if (dailySuccess) {
+          // Only commit to local state once the server actually confirmed it
+          vanillaPlusCompletionData.daily[dailyDate] = true;
+          vanillaPlusFileCache.dailyFiles.push({ daily: dailyUpload.cache });
+          vanillaPlusFileCache.count += 1;
+          store.set("vanillaPlusFileCache", vanillaPlusFileCache);
+          store.set("vanillaPlusCompletionData", vanillaPlusCompletionData);
+        }
+
+        mainWindow.webContents.send("log-update", {
+          success: dailySuccess,
+          message: dailySuccess ? "Daily completion logged!" : "Failed to log daily — will retry next check",
         });
-        vanillaPlusFileCache.count += 1;
-        newDaily = true;
       }
 
-      if (weeklyCompleted && vanillaPlusCompletionData.weekly[weeklyWeek] !== true) {
-        vanillaPlusCompletionData.weekly[weeklyWeek] = true;
-        vanillaPlusFileCache.weeklyFiles.push({
-          weekly: {
+      if (newWeekly && isLegitCheck) {
+        const weeklyUpload = {
+          game: "vanilla-plus",
+          type: "weekly",
+          accountName: accountName,
+          wallet: walletWallet,
+          cache: {
             ...dataObj.weekly,
             week: weeklyWeek,
             accountName: accountName,
             wallet: walletWallet,
             randomString: randomString
           }
-        });
-        vanillaPlusFileCache.count += 1;
-        newWeekly = true;
-      }
-
-      if (newDaily || newWeekly) {
-        if (newDaily && isLegitCheck) {
-          const dailyUpload = { 
-            game: "vanilla-plus", 
-            type: "daily",
-            accountName: accountName,
-            wallet: walletWallet,
-            cache: { 
-              ...dataObj.daily, 
-              date: dailyDate, 
-              accountName: accountName,
-              wallet: walletWallet,
-              randomString: randomString
-            }
-          };          
-          const dailySuccess = await logToServer(dailyUpload);
-          mainWindow.webContents.send("log-update", {
-            success: dailySuccess,
-            message: dailySuccess ? "Daily completion logged!" : "Failed to log daily",
-          });
-        }
-
-        if (newWeekly && isLegitCheck) {
-          const weeklyUpload = { 
-            game: "vanilla-plus", 
-            type: "weekly", 
-            accountName: accountName,
-            wallet: walletWallet,
-            cache: { 
-              ...dataObj.weekly, 
-              week: weeklyWeek,
-              accountName: accountName,
-              wallet: walletWallet,
-              randomString: randomString
-            }
-          };          
-          const weeklySuccess = await logToServer(weeklyUpload);
-          mainWindow.webContents.send("log-update", {
-            success: weeklySuccess,
-            message: weeklySuccess ? "Weekly completion logged!" : "Failed to log weekly",
-          });
-        }
-        store.set("vanillaPlusFileCache", vanillaPlusFileCache);
-        store.set("vanillaPlusCompletionData", vanillaPlusCompletionData);
-        return {
-          success: true,
-          isLegit: true,
-          message: (newDaily && newWeekly) ? "Daily & weekly logged" : newDaily ? "Daily logged" : "Weekly logged",
         };
-      } else {
-        console.log("no new data to log to server, thank you for funning fren!")
+        weeklySuccess = await logToServer(weeklyUpload);
+
+        if (weeklySuccess) {
+          vanillaPlusCompletionData.weekly[weeklyWeek] = true;
+          vanillaPlusFileCache.weeklyFiles.push({ weekly: weeklyUpload.cache });
+          vanillaPlusFileCache.count += 1;
+          store.set("vanillaPlusFileCache", vanillaPlusFileCache);
+          store.set("vanillaPlusCompletionData", vanillaPlusCompletionData);
+        }
+
         mainWindow.webContents.send("log-update", {
-          success: true,
-          message: "No new completions to log",
+          success: weeklySuccess,
+          message: weeklySuccess ? "Weekly completion logged!" : "Failed to log weekly — will retry next check",
         });
-        return { success: true, isLegit: true, message: "No new data" };
       }
+
+      const anySuccess = dailySuccess || weeklySuccess;
+      return {
+        success: anySuccess,
+        isLegit: true,
+        message: (dailySuccess && weeklySuccess) ? "Daily & weekly logged"
+          : dailySuccess ? "Daily logged"
+          : weeklySuccess ? "Weekly logged"
+          : "Logging failed, will retry",
+      };
+    } else {
+      console.log("no new data to log to server, thank you for funning fren!")
+      mainWindow.webContents.send("log-update", {
+        success: true,
+        message: "No new completions to log",
+      });
+      return { success: true, isLegit: true, message: "No new data" };
+    }
     } else {
       const errorMsg = parsedData?.error || "Failed to parse addon data";
       console.error("Parsing failed:", errorMsg);
@@ -1703,8 +1721,41 @@ ipcMain.handle("play-vanilla-plus", async () => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+function isDebuggerAttached() {
+  // Direct check — is a debugger actively connected right now?
+  if (inspector.url() !== undefined) return true;
+
+  // Was app launched with --inspect or --inspect-brk?
+  if (process.debugPort !== 0) return true;
+
+  // Timing backup — catches OS-level attachment that bypasses Node's protocol entirely
+  const t0 = performance.now();
+  for (let i = 0; i < 1_000_000; i++) {}
+  const elapsed = performance.now() - t0;
+  if (elapsed > 200) return true;
+
+  return false;
+}
+
+
+
+
 async function logToServer(dataUpload) {
   console.log("log to server triggered")
+  if (isDebuggerAttached()) {
+    console.log('Debug detection triggered');
+    return false; // silent — caller sees a normal failure, nothing to tip off attacker
+  }
   const walletRaw = store.get("wallet", null);
   const wallet = walletRaw.wallet;
 
@@ -1726,24 +1777,44 @@ async function logToServer(dataUpload) {
     // Hash userPassword to reduce payload size
     const userPaswordAdded = processKeysIntoPassword(publicKey, privateKey);
     const userPassword = crypto.createHash('sha256').update(userPaswordAdded).digest('hex');
-    const payload = `${fileHash}:${gameName}:${secret}:${userPassword}:${type}:${timeField}:${accountName}`;
-
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const payloadFields = `${fileHash}:${gameName}:${userPassword}:${type}:${timeField}:${accountName}:${timestamp}:${nonce}`;
+    const signature = crypto.createHmac('sha256', Buffer.from(secret, 'utf8'))
+    .update(Buffer.from(payloadFields, 'utf8'))
+    .digest('hex');
+    const payload = `${payloadFields}:${signature}`;
     // Log payload size for debugging
     console.log('Payload size:', Buffer.from(payload).length, 'bytes');
 
-    // Encrypt with RSA public key
+    // Hybrid encrypt: AES for the payload (no size limit), RSA wraps just the AES key
     let encryptedPayload;
     try {
-      encryptedPayload = crypto.publicEncrypt(
+      const aesKey = crypto.randomBytes(32); // AES-256
+      const iv = crypto.randomBytes(12);     // GCM standard IV length
+
+      const cipher = crypto.createCipheriv('aes-256-gcm', aesKey, iv);
+      let ciphertext = cipher.update(payload, 'utf8', 'base64');
+      ciphertext += cipher.final('base64');
+      const authTag = cipher.getAuthTag().toString('base64');
+
+      const encryptedKey = crypto.publicEncrypt(
         { key: serverPublicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
-        Buffer.from(payload)
+        aesKey
       ).toString('base64');
+
+      encryptedPayload = JSON.stringify({
+        key: encryptedKey,
+        iv: iv.toString('base64'),
+        tag: authTag,
+        data: ciphertext,
+      });
     } catch (err) {
-      console.error('RSA encryption error:', { error: err.message, keySnippet: serverPublicKey.substring(0, 50) });
+      console.error('Hybrid encryption error:', { error: err.message, keySnippet: serverPublicKey.substring(0, 50) });
       throw err;
     }
 
-    const response = await fetch('http://vanilla-plus.com/api/auth-ping', {
+    const response = await fetch('https://vanilla-plus.com/api/auth-ping', {
       // const response = await fetch('http://localhost:3000/api/auth-ping', {
 
       method: 'POST',
@@ -1763,6 +1834,30 @@ async function logToServer(dataUpload) {
     return false;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ipcMain.handle("export-vanilla-plus-files", async () => {
   console.log("export vanilla plus files triggered");
