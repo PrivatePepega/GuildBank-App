@@ -9,11 +9,7 @@ import os from "node:os";
 import sudo from "sudo-prompt"; 
 import fetch from "node-fetch";
 import crypto from "crypto";
-// import updateElectronApp from "update-electron-app";
 import pkg from "electron-updater";
-import https from "https";
-// import NodeRSA from 'node-rsa';
-// import * as openpgp from 'openpgp';
 import dotenv from 'dotenv';
 import log from "electron-log";
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
@@ -648,8 +644,8 @@ async function checkForUpdates(silent = false) {
   log.info("[AutoUpdater] Initiating update check");
   try {
     const updateCheckResult = await pkg.autoUpdater.checkForUpdates();
-    const currentVersion = app.getVersion();
-    const latestVersion = updateCheckResult?.updateInfo?.version;
+    let currentVersion = app.getVersion();
+    let latestVersion = updateCheckResult?.updateInfo?.version;
 
         // Normalize versions to handle potential "v" prefix or formatting issues
         if (latestVersion && latestVersion.startsWith("v")) {
@@ -1555,10 +1551,14 @@ ipcMain.handle("play-vanilla-plus", async () => {
     console.log("Generated random string:", randomString);
 
     const parsedData = await luaToJsonSimple(filePath);
-    if (parsedData && !parsedData.error) {
-      console.log("data parsed", parsedData);
-      const dataObj = JSON.parse(parsedData);
-      console.log("data to json", dataObj);
+    const dataObj = JSON.parse(parsedData);
+    if (dataObj.error) {
+      console.error("Parsing failed:", dataObj.error);
+      return { success: false, message: dataObj.error };
+    }
+    console.log("data parsed", dataObj);
+
+  
 
 
     // Server name filter
@@ -1686,12 +1686,7 @@ ipcMain.handle("play-vanilla-plus", async () => {
       });
       return { success: true, isLegit: true, message: "No new data" };
     }
-    } else {
-      const errorMsg = parsedData?.error || "Failed to parse addon data";
-      console.error("Parsing failed:", errorMsg);
-      return { success: false, message: errorMsg };
-    }
-  } 
+    } 
   catch (error) {
     console.error('Error launching Vanilla Plus:', error);
     return { success: false, message: error.message };
