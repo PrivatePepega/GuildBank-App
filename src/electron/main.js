@@ -1608,7 +1608,7 @@ ipcMain.handle("play-vanilla-plus", async () => {
     let weeklySuccess = false;
 
     if (newDaily || newWeekly) {
-      if (newDaily && isLegitCheck) {
+      if (newDaily && isLegit) {
         const dailyUpload = {
           game: "vanilla-plus",
           type: "daily",
@@ -1639,7 +1639,7 @@ ipcMain.handle("play-vanilla-plus", async () => {
         });
       }
 
-      if (newWeekly && isLegitCheck) {
+      if (newWeekly && isLegit) {
         const weeklyUpload = {
           game: "vanilla-plus",
           type: "weekly",
