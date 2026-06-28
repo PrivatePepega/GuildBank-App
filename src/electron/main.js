@@ -658,20 +658,20 @@ async function checkForUpdates(silent = false) {
         log.info(`[AutoUpdater] Current version: ${currentVersion}, Latest version: ${latestVersion || "unknown"}`);
 
 
-    if (!latestVersion || currentVersion === latestVersion) {
-      // No update available or already on latest version
-      log.info(`[AutoUpdater] No update needed. Current version: ${currentVersion}, Latest version: ${latestVersion || "unknown"}`);
-      mainWindow?.webContents.send("update-status", "App is up to date");
-      // Show "You're up to date, fren!" dialog
-      await dialog.showMessageBox(mainWindow, {
-        type: "info",
-        title: "Up to Date",
-        message: "You're up to date, fren!",
-        buttons: ["OK"],
-        defaultId: 0,
-      });
-      return;
-    }
+        if (!latestVersion || currentVersion === latestVersion) {
+          log.info(`[AutoUpdater] No update needed. Current version: ${currentVersion}, Latest version: ${latestVersion || "unknown"}`);
+          mainWindow?.webContents.send("update-status", "App is up to date");
+          if (!silent) {
+            await dialog.showMessageBox(mainWindow, {
+              type: "info",
+              title: "Up to Date",
+              message: "You're up to date, fren!",
+              buttons: ["OK"],
+              defaultId: 0,
+            });
+          }
+          return;
+        }
 
     // Update available
     log.info(`[AutoUpdater] Update available: v${latestVersion}`);
